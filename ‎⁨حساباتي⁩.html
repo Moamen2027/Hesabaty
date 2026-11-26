@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>حساباتي</title>
+<style>
+:root{--bg:#f5f6f8;--card:#fff;--tx:#1b1f24;--mut:#6b7280;--br:#e3e6ea;--ac:#0f766e;--pos:#15803d;--neg:#b91c1c;color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#14171a;--card:#1f2327;--tx:#eceff2;--mut:#9aa3ad;--br:#2e343a;--ac:#2dd4bf;--pos:#4ade80;--neg:#f87171;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#14171a;--card:#1f2327;--tx:#eceff2;--mut:#9aa3ad;--br:#2e343a;--ac:#2dd4bf;--pos:#4ade80;--neg:#f87171;color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font-family:system-ui,-apple-system,"Segoe UI",Tahoma,Arial,sans-serif;max-width:520px;margin-inline:auto;padding:16px}
+h1{font-size:22px;margin:4px 0 14px}
+.card{background:var(--card);border:1px solid var(--br);border-radius:14px;padding:14px 16px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;width:100%;color:inherit;font:inherit;text-align:start}
+button.card{cursor:pointer}
+.card .l{color:var(--mut);font-size:14px}
+.card .v{font-size:20px;font-weight:700}
+.card .hint{font-size:12px;color:var(--ac)}
+.net{border-color:var(--ac)}
+.box{background:var(--card);border:1px solid var(--br);border-radius:14px;padding:14px;margin-top:14px}
+label{display:block;font-size:13px;color:var(--mut);margin:10px 0 4px}
+select,input{width:100%;padding:11px;border-radius:10px;border:1px solid var(--br);background:var(--bg);color:var(--tx);font:inherit}
+.btn{margin-top:12px;width:100%;padding:12px;border:0;border-radius:10px;background:var(--ac);color:#fff;font:inherit;font-weight:700;cursor:pointer}
+:root[data-theme="dark"] .btn{color:#0b1f1c}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .btn{color:#0b1f1c}}
+.back{background:none;border:0;color:var(--ac);font:inherit;font-size:15px;cursor:pointer;padding:6px 0;margin-bottom:6px}
+.row{background:var(--card);border:1px solid var(--br);border-radius:12px;padding:12px;margin-bottom:8px}
+.row .top{display:flex;justify-content:space-between;font-weight:700}
+.row .d{color:var(--mut);font-size:12px;margin-top:2px}
+.acts{display:flex;gap:8px;margin-top:8px}
+.acts button{flex:1;padding:8px;border-radius:8px;border:1px solid var(--br);background:var(--bg);color:var(--tx);font:inherit;font-size:13px;cursor:pointer}
+.empty{text-align:center;color:var(--mut);padding:24px}
+.tot{font-size:15px;margin:6px 0 12px}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+var T={
+ bal:{t:'رصيد (فلوس معايا)',c:'الرصيد اللي معايا',p:'ملاحظة (اختياري)'},
+ exp:{t:'مصاريف (فلوس بدفعها)',c:'إجمالي المصاريف',p:'المصروف على إيه؟'},
+ to:{t:'مصاريف مستحقة ليا (هاخدها)',c:'مستحق ليا (لسه هاخده)',p:'اسم الشخص'},
+ by:{t:'مصاريف مستحقة عليا (هدفعها)',c:'مستحق عليا (لسه هدفعه)',p:'اسم الشخص'}
+};
+var data=[],view='home';
+try{var s=localStorage.getItem('hesabaty');if(s)data=JSON.parse(s)||[];}catch(e){data=[];}
+function save(){try{localStorage.setItem('hesabaty',JSON.stringify(data));}catch(e){}}
+function sum(k){return data.filter(function(x){return x.k===k}).reduce(function(a,x){return a+x.a},0);}
+function f(n){return Number(n).toLocaleString('ar-EG',{maximumFractionDigits:2});}
+function esc(s){return String(s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]});}
+function render(){
+ var h='',app=document.getElementById('app');
+ if(view==='home'){
+  var net=sum('bal')+sum('to')-sum('by');
+  h='<h1>💰 حساباتي</h1>';
+  ['bal','to','by','exp'].forEach(function(k){
+   h+='<button class="card" onclick="openV(\''+k+'\')"><div><div class="l">'+T[k].c+'</div><div class="hint">اضغط للتفاصيل ›</div></div><div class="v">'+f(sum(k))+'</div></button>';
+  });
+  h+='<div class="card net"><div class="l">الصافي (رصيد + ليا − عليا)</div><div class="v" style="color:var(--'+(net<0?'neg':'pos')+')">'+f(net)+'</div></div>';
+  h+='<div class="box"><label>النوع</label><select id="k">';
+  ['bal','exp','to','by'].forEach(function(k){h+='<option value="'+k+'">'+T[k].t+'</option>';});
+  h+='</select><label>المبلغ</label><input id="a" type="number" inputmode="decimal" placeholder="0">';
+  h+='<label>تفاصيل</label><input id="n" placeholder="اسم أو ملاحظة"><button class="btn" onclick="add()">إضافة</button></div>';
+ }else{
+  var list=data.filter(function(x){return x.k===view});
+  h='<button class="back" onclick="openV(\'home\')">› رجوع</button><h1>'+T[view].c+'</h1><div class="tot">الإجمالي: <b>'+f(sum(view))+'</b></div>';
+  if(!list.length)h+='<div class="empty">مفيش حاجة هنا لسه</div>';
+  list.slice().reverse().forEach(function(x){
+   h+='<div class="row"><div class="top"><span>'+(esc(x.n)||'—')+'</span><span>'+f(x.a)+'</span></div><div class="d">'+x.d+'</div><div class="acts">';
+   if(view==='to')h+='<button onclick="settle('+x.id+')">✔ اتسلّمت (تضاف للرصيد)</button>';
+   if(view==='by')h+='<button onclick="settle('+x.id+')">✔ اتدفعت (تتخصم من الرصيد)</button>';
+   h+='<button onclick="del('+x.id+')">🗑 مسح</button></div></div>';
+  });
+ }
+ app.innerHTML=h;
+}
+function openV(v){view=v;render();window.scrollTo(0,0);}
+function add(){
+ var a=parseFloat(document.getElementById('a').value);
+ if(!(a>0))return;
+ data.push({id:Date.now(),k:document.getElementById('k').value,a:a,n:document.getElementById('n').value.trim(),d:new Date().toLocaleDateString('ar-EG')});
+ save();render();
+}
+function del(id){data=data.filter(function(x){return x.id!==id});save();render();}
+function settle(id){
+ var x=data.filter(function(y){return y.id===id})[0];if(!x)return;
+ data.push({id:Date.now(),k:'bal',a:x.k==='to'?x.a:-x.a,n:(x.k==='to'?'استلام من ':'دفع لـ ')+x.n,d:new Date().toLocaleDateString('ar-EG')});
+ data=data.filter(function(y){return y.id!==id});
+ save();render();
+}
+render();
+</script>
+</body>
+</html>
