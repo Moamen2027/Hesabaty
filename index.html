@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>حساباتي</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="حساباتي">
+<style>
+:root{--bg:#f6f7f9;--card:#fff;--tx:#1c1f24;--mut:#6b7280;--bd:#e5e7eb;--pri:#0f766e;--red:#c2410c;--grn:#15803d;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#111418;--card:#1b2026;--tx:#eef0f3;--mut:#9aa3af;--bd:#2c333b;--pri:#2dd4bf;--red:#fb923c;--grn:#4ade80}}
+:root[data-theme="dark"]{--bg:#111418;--card:#1b2026;--tx:#eef0f3;--mut:#9aa3af;--bd:#2c333b;--pri:#2dd4bf;--red:#fb923c;--grn:#4ade80}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font-family:system-ui,-apple-system,"Segoe UI",Tahoma,sans-serif;max-width:560px;margin-inline:auto;padding:14px}
+h1{font-size:20px;margin:6px 0 12px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.c{background:var(--card);border:1px solid var(--bd);border-radius:14px;padding:12px}
+.c small{color:var(--mut);display:block;font-size:13px}
+.c b{font-size:20px}
+.big{grid-column:1/3;background:var(--pri);color:#fff;border:0}
+.big small{color:#e6fffb}.big b{font-size:28px}
+form{margin:14px 0;display:grid;gap:8px}
+select,input,button{font:inherit;padding:11px;border-radius:10px;border:1px solid var(--bd);background:var(--card);color:var(--tx);width:100%}
+button.add{background:var(--pri);color:#fff;border:0;font-weight:700}
+.row{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:10px 0;border-bottom:1px solid var(--bd)}
+.row:last-child{border:0}
+.row small{color:var(--mut);display:block}
+.act{display:flex;gap:6px;align-items:center}.act button{width:auto;padding:6px 10px;font-size:13px}
+.done{opacity:.55}
+.in{color:var(--grn)}.out{color:var(--red)}
+</style>
+</head>
+<body>
+<h1>💰 حساباتي</h1>
+<div class="grid">
+  <div class="c big"><small>الرصيد اللي معايا</small><b id="cash">0</b></div>
+  <div class="c"><small>مستحق ليا (لسه هاخده)</small><b id="owedMe" class="in">0</b></div>
+  <div class="c"><small>مستحق عليا (لسه هدفعه)</small><b id="iOwe" class="out">0</b></div>
+  <div class="c"><small>إجمالي المصاريف</small><b id="exp">0</b></div>
+  <div class="c"><small>الصافي (رصيد + ليا − عليا)</small><b id="net">0</b></div>
+</div>
+<form id="f">
+  <input id="who" placeholder="اسم الإدخال (اكتبه زي ما تحب)">
+  <select id="type">
+    <option value="balance">رصيد (فلوس معايا)</option>
+    <option value="expense">مصاريف (فلوس بدفعها)</option>
+    <option value="dueme">مصاريف مستحقة ليا (هاخدها)</option>
+    <option value="dueyou">مصاريف مستحقة عليا (هدفعها)</option>
+  </select>
+  <input id="amt" type="text" inputmode="decimal" autocomplete="off" placeholder="المبلغ">
+  <button class="add" type="submit">إضافة</button>
+</form>
+<div class="c" id="list"></div>
+<script>
+var KEY="hesabat_v2",items=[];
+try{items=JSON.parse(localStorage.getItem(KEY)||"[]")}catch(e){items=[]}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(items))}catch(e){}}
+function fmt(n){return n.toLocaleString("ar-EG",{maximumFractionDigits:2})}
+var L={balance:"رصيد",expense:"مصاريف",dueme:"مستحق ليا",dueyou:"مستحق عليا"};
+function esc(s){return String(s).replace(/[&<>"]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]})}
+function render(){
+  var cash=0,om=0,io=0,ex=0;
+  items.forEach(function(i){
+    var a=i.amt;
+    if(i.type=="balance")cash+=a;
+    else if(i.type=="expense"){cash-=a;ex+=a}
+    else if(i.type=="dueme"){if(i.settled)cash+=a;else om+=a}
+    else if(i.type=="dueyou"){if(i.settled)cash-=a;else io+=a}
+  });
+  cash=+cash.toFixed(2);
+  document.getElementById("cash").textContent=fmt(cash);
+  document.getElementById("owedMe").textContent=fmt(om);
+  document.getElementById("iOwe").textContent=fmt(io);
+  document.getElementById("exp").textContent=fmt(ex);
+  document.getElementById("net").textContent=fmt(cash+om-io);
+  var h="";
+  if(!items.length)h='<small style="color:var(--mut)">لسه مفيش إدخالات. ضيف أول واحد من فوق.</small>';
+  items.slice().reverse().forEach(function(i){
+    var debt=i.type=="dueme"||i.type=="dueyou";
+    var st=debt?(i.settled?(i.type=="dueme"?" · اتاخد":" · اتدفع"):" · لسه"):"";
+    h+='<div class="row"><div class="'+(i.settled?"done":"")+'"><b>'+esc(i.who||L[i.type])+'</b><small>'+L[i.type]+st+' · '+i.date+'</small></div><div class="act"><b>'+fmt(i.amt)+'</b>';
+    if(debt&&!i.settled)h+='<button data-s="'+i.id+'">'+(i.type=="dueme"?"استلمتها ✓":"دفعتها ✓")+'</button>';
+    if(debt&&i.settled)h+='<button data-u="'+i.id+'">تراجع</button>';
+    h+='<button data-d="'+i.id+'">🗑</button></div></div>';
+  });
+  document.getElementById("list").innerHTML=h;
+}
+document.getElementById("f").addEventListener("submit",function(e){
+  e.preventDefault();
+  var raw=document.getElementById("amt").value.replace(/[٠-٩]/g,function(d){return d.charCodeAt(0)-1632}).replace(/[۰-۹]/g,function(d){return d.charCodeAt(0)-1776}).replace(/[٫,،]/g,".").replace(/\s/g,"");
+  var a=parseFloat(raw);
+  if(!(a>0)){alert("اكتب المبلغ بالأرقام");return;}
+  items.push({id:Date.now(),type:document.getElementById("type").value,who:document.getElementById("who").value.trim(),amt:a,date:new Date().toLocaleDateString("ar-EG"),settled:false});
+  save();document.getElementById("who").value="";document.getElementById("amt").value="";render();
+});
+document.getElementById("list").addEventListener("click",function(e){
+  var s=e.target.getAttribute("data-s"),u=e.target.getAttribute("data-u"),d=e.target.getAttribute("data-d");
+  if(s){items.forEach(function(i){if(i.id==s)i.settled=true});save();render()}
+  if(u){items.forEach(function(i){if(i.id==u)i.settled=false});save();render()}
+  if(d&&confirm("تمسح الإدخال ده؟")){items=items.filter(function(i){return i.id!=d});save();render()}
+});
+render();
+</script>
+</body>
+</html>
